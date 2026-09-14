@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INE 315 &middot; Week 5 Demo 3 &middot; Inventory Position</title>
+<style>
+:root{
+  --bg:#fcfcfb; --panel:#ffffff; --line:#e4e2dd; --line-soft:#efedea;
+  --ink:#24211e; --ink-2:#55504a; --ink-3:#8a837b;
+  --inv:#A93226; --pos:#2874A6;
+  --band:rgba(169,50,38,.09); --ok:#1e7a4b; --bad:#a33a2c;
+  --code-bg:#f7f6f4; --accent:#A93226;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#16181a; --panel:#1d2023; --line:#31363b; --line-soft:#272c30;
+    --ink:#e9e6e2; --ink-2:#b4aea7; --ink-3:#847d75;
+    --inv:#C9584B; --pos:#4795CB;
+    --band:rgba(201,88,75,.14); --ok:#54b585; --bad:#e08074;
+    --code-bg:#15181a; --accent:#C9584B;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+.wrap{max-width:1080px; margin:0 auto; padding-inline:16px; padding-block:22px 56px}
+header{border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:22px}
+.eyebrow{font-size:12px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); margin:0 0 6px}
+h1{font-size:clamp(21px,3.2vw,30px); line-height:1.2; margin:0 0 8px; font-weight:650}
+.sub{margin:0; color:var(--ink-2); font-size:15px; max-width:62ch}
+h2{font-size:clamp(17px,2.2vw,21px); margin:34px 0 12px; font-weight:640}
+h2 .num{color:var(--accent); font-variant-numeric:tabular-nums; margin-right:8px}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px}
+
+/* ---------- chart ---------- */
+.chartwrap{overflow-x:auto}
+svg.chart{display:block; width:100%; min-width:520px; height:auto}
+.legend{display:flex; flex-wrap:wrap; gap:16px; margin-top:10px; font-size:13.5px; color:var(--ink-2)}
+.key{display:inline-flex; align-items:center; gap:7px}
+.swatch{width:20px; height:3px; border-radius:2px; flex:none}
+.swatch.dash{height:0; border-top:2px dashed var(--ink-3); width:20px}
+.swatch.band{height:12px; background:var(--band); border:1px solid var(--line); border-radius:3px}
+
+/* ---------- kpis ---------- */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-top:14px}
+.kpi{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px}
+.kpi .v{font-size:clamp(19px,3vw,25px); font-weight:650; font-variant-numeric:tabular-nums; line-height:1.15}
+.kpi .l{font-size:12px; color:var(--ink-3); margin-top:3px}
+.kpi.good .v{color:var(--ok)} .kpi.bad .v{color:var(--bad)}
+
+/* ---------- pipeline ---------- */
+.pipe{margin-top:16px; border:1px solid var(--line); border-radius:var(--radius); padding:12px 13px; background:var(--panel)}
+.pipe h3{margin:0 0 4px; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+.pipe .expl{font-size:13px; color:var(--ink-2); margin:0 0 9px}
+.blocks{display:flex; flex-wrap:wrap; gap:8px; min-height:38px; align-items:center}
+.block{border:1px solid var(--pos); color:var(--pos); border-radius:7px; padding:5px 10px;
+       font-size:13px; font-variant-numeric:tabular-nums; background:transparent; white-space:nowrap}
+.block b{font-weight:640}
+.empty{color:var(--ink-3); font-size:13.5px; font-style:italic}
+
+/* ---------- controls ---------- */
+.controls{display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:14px 20px; margin-top:16px}
+.ctl label{display:flex; justify-content:space-between; align-items:baseline; font-size:14px; gap:10px}
+.ctl .nm{color:var(--ink-2)}
+.ctl .val{font-weight:650; font-variant-numeric:tabular-nums; color:var(--ink)}
+input[type=range]{width:100%; margin:7px 0 0; accent-color:var(--accent); height:22px}
+.hint{font-size:12.5px; color:var(--ink-3); margin-top:2px}
+.btnrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px}
+button{
+  font:inherit; font-size:14px; padding:8px 14px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--line); background:var(--panel); color:var(--ink);
+}
+button:hover{border-color:var(--ink-3)}
+button.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+button.primary:hover{filter:brightness(1.08)}
+button:focus-visible{outline:2px solid var(--pos); outline-offset:2px}
+
+/* ---------- code trace ---------- */
+.stepbar{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px}
+.dayno{font-variant-numeric:tabular-nums; font-weight:650; font-size:15px}
+.kbd{font-size:12px; color:var(--ink-3)}
+kbd{font:inherit; font-size:11px; border:1px solid var(--line); border-bottom-width:2px;
+    border-radius:4px; padding:1px 5px; color:var(--ink-2)}
+pre.code{margin:0; background:var(--code-bg); border:1px solid var(--line); border-radius:var(--radius);
+  padding:13px 14px; overflow-x:auto; font:13.5px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.cl{display:block; white-space:pre}
+.cl.active{background:var(--band); border-radius:4px}
+.ann{color:var(--ink-3); font-style:italic}
+.ann b{color:var(--ink-2); font-style:normal; font-weight:640}
+.ann.fire b{color:var(--pos)}
+.ann.warn b{color:var(--bad)}
+.kw{color:var(--accent)} .st{color:var(--pos)} .cm{color:var(--ink-3)}
+
+/* ---------- callout / exercises ---------- */
+.note{border-left:3px solid var(--accent); background:var(--panel); border-radius:0 var(--radius) var(--radius) 0;
+  padding:12px 15px; margin-top:16px; font-size:14.5px; color:var(--ink-2)}
+.note b{color:var(--ink)}
+ol.ex{list-style:none; counter-reset:x; padding:0; margin:0; display:grid; gap:11px}
+ol.ex li{counter-increment:x; background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--radius); padding:13px 15px 13px 47px; position:relative; font-size:14.5px}
+ol.ex li::before{content:counter(x); position:absolute; left:14px; top:13px; width:22px; height:22px;
+  border-radius:50%; background:var(--accent); color:#fff; font-size:12.5px; font-weight:650;
+  display:grid; place-items:center}
+ol.ex .q{color:var(--ink)}
+ol.ex .after{margin-top:9px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+details.ans{margin-top:8px; font-size:14px; color:var(--ink-2)}
+details.ans summary{cursor:pointer; color:var(--pos); font-size:13.5px; width:max-content}
+details.ans p{margin:7px 0 0}
+footer{margin-top:44px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-3)}
+footer a{color:var(--pos)}
+@media (max-width:560px){ .wrap{padding-block:16px 40px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">INE 315 &middot; Programming Applications for Industrial Engineering</p>
+  <h1>Week&nbsp;5 Demo&nbsp;3 &mdash; Why a Retailer Orders Before It Runs Out</h1>
+  <p class="sub">The same <code>Retailer</code> class you built in the notebook, running live. Drag the
+  controls and watch the consequence. Every picture below is tied to a named line of Python.</p>
+</header>
+
+<!-- =============== THE CHART =============== -->
+<div class="panel">
+  <div class="chartwrap"><svg class="chart" id="chart" viewBox="0 0 900 340"
+       role="img" aria-label="Inventory on hand and inventory position over 60 days"></svg></div>
+  <div class="legend">
+    <span class="key"><span class="swatch" style="background:var(--inv)"></span>
+      <code>self.inventory</code> &mdash; on the shelf</span>
+    <span class="key"><span class="swatch" style="background:var(--pos)"></span>
+      <code>inventory_position()</code> &mdash; shelf + on its way</span>
+    <span class="key"><span class="swatch dash"></span> reorder point <code>s</code></span>
+    <span class="key"><span class="swatch band"></span> waiting for a delivery</span>
+  </div>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<!-- =============== PIPELINE =============== -->
+<div class="pipe">
+  <h3>What <code>self.on_order</code> holds right now</h3>
+  <p class="expl">Stock that is paid for and moving, but not yet on the shelf. This list is invisible
+  in the red line &mdash; and it is the whole reason the retailer does not reorder every single day.</p>
+  <div class="blocks" id="pipe"></div>
+</div>
+
+<!-- =============== CONTROLS =============== -->
+<h2><span class="num">1</span>Change something</h2>
+<div class="panel">
+  <div class="controls">
+    <div class="ctl">
+      <label for="s"><span class="nm">reorder point <code>s</code></span><span class="val" id="sv">80</span></label>
+      <input type="range" id="s" min="0" max="160" step="5" value="80">
+      <p class="hint">order when position drops below this</p>
+    </div>
+    <div class="ctl">
+      <label for="S"><span class="nm">order-up-to <code>S</code></span><span class="val" id="Sv">200</span></label>
+      <input type="range" id="S" min="60" max="320" step="10" value="200">
+      <p class="hint">bring the position back up to here</p>
+    </div>
+    <div class="ctl">
+      <label for="L"><span class="nm">lead time (days)</span><span class="val" id="Lv">3</span></label>
+      <input type="range" id="L" min="0" max="10" step="1" value="3">
+      <p class="hint">how long a delivery takes to arrive</p>
+    </div>
+    <div class="ctl">
+      <label for="sd"><span class="nm">demand variability</span><span class="val" id="sdv">6</span></label>
+      <input type="range" id="sd" min="0" max="16" step="1" value="6">
+      <p class="hint">std. dev. of daily demand (mean 20)</p>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="primary" data-preset="healthy">Healthy settings</button>
+    <button data-preset="fail">Why <code>s&nbsp;=&nbsp;40</code> fails</button>
+    <button data-preset="slow">Slow supplier</button>
+    <button id="reseed">New random 60 days</button>
+  </div>
+  <div class="note" id="verdict"></div>
+</div>
+
+<!-- =============== CODE TRACE =============== -->
+<h2><span class="num">2</span>Step through the loop</h2>
+<div class="panel">
+  <div class="stepbar">
+    <button id="prev">&larr; Previous day</button>
+    <button class="primary" id="next">Next day &rarr;</button>
+    <span class="dayno">day <span id="dayno">0</span> of 59</span>
+    <span class="kbd">or press <kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>
+  </div>
+  <pre class="code" id="code"></pre>
+  <div class="note"><b>The order of those five lines is the model.</b> Swap <code>receive</code> and
+  <code>serve</code> and a delivery arrives too late to help the customers who came that morning.</div>
+</div>
+
+<!-- =============== EXERCISES =============== -->
+<h2><span class="num">3</span>Exercises</h2>
+<p class="sub">The same five from the notebook. Predict the answer, press the button, then check.</p>
+<ol class="ex">
+
+  <li>
+    <span class="q">Set <code>s&nbsp;=&nbsp;40</code>. Look at <b>units unmet</b>. Why does it stop being zero?</span>
+    <div class="after"><button data-preset="fail">Set it up</button></div>
+    <details class="ans"><summary>Check your answer</summary>
+      <p>Demand is about 20 a day and the delivery takes 3 days, so roughly <b>60 units</b> are consumed
+      while you wait. Trigger at 40 and you run out before help arrives. The red line hits zero inside
+      every shaded band.</p></details>
+  </li>
+
+  <li>
+    <span class="q">Lead-time demand is about <code>3&nbsp;&times;&nbsp;20&nbsp;=&nbsp;60</code>.
+    Which values of <code>s</code> are clearly too small? Drag <code>s</code> slowly upward from 20.</span>
+    <div class="after"><button data-set="s:20">s = 20</button><button data-set="s:60">s = 60</button><button data-set="s:80">s = 80</button></div>
+    <details class="ans"><summary>Check your answer</summary>
+      <p>Anything below about 60 stocks out. Exactly 60 is marginal &mdash; it covers <em>average</em>
+      demand during the wait, so any above-average week still fails. The gap between 60 and your working
+      value is what an inventory course calls safety stock.</p></details>
+  </li>
+
+  <li>
+    <span class="q">Change the lead time to 6, keeping <code>s&nbsp;=&nbsp;80</code>. What happens, and why?</span>
+    <div class="after"><button data-preset="slow">Set it up</button></div>
+    <details class="ans"><summary>Check your answer</summary>
+      <p>It fails again, for the same reason with different numbers: 6 days of waiting needs about 120
+      units of cover, and 80 does not provide it. <b>A slower supplier and a smaller <code>s</code> are the
+      same bug.</b></p></details>
+  </li>
+
+  <li>
+    <span class="q">Press <em>New random 60 days</em> several times with healthy settings. Is the
+    <em>shape</em> the same? Are the <em>numbers</em>?</span>
+    <div class="after"><button data-preset="healthy">Healthy</button><button id="reseed2">New 60 days</button></div>
+    <details class="ans"><summary>Check your answer</summary>
+      <p>The sawtooth is always a sawtooth &mdash; that comes from the policy. The teeth differ every time
+      because demand is random. This is why <code>random.seed(0)</code> matters in your notebook: without
+      it you cannot compare your run with anyone else's.</p></details>
+  </li>
+
+  <li>
+    <span class="q">Watch the <span style="color:var(--pos)">blue</span> line. Where does it differ from
+    the red one, and what is the retailer actually deciding on?</span>
+    <details class="ans"><summary>Check your answer</summary>
+      <p>They separate the moment an order is placed and rejoin when it lands. The <code>if</code> compares
+      <b>the blue line</b> with <code>s</code>, never the red one. Compare against the red line instead and
+      the retailer reorders every day while it waits &mdash; then drowns when everything arrives at once.
+      That is what <code>on_order</code> prevents.</p></details>
+  </li>
+
+</ol>
+
+<footer>
+  <p>INE 315 &middot; Dr. Yimo Yan &middot; Department of Industrial Engineering, American University of Sharjah.
+  Companion to <code>demo3_retailer_simulation.ipynb</code>.</p>
+  <p>This page has its own random number generator, so the day-by-day numbers differ from your notebook.
+  The behaviour, and every conclusion above, is identical.</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------- a seeded generator, so a run is repeatable ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeGauss(rnd){let spare=null;return function(mu,sd){
+  if(spare!==null){const v=spare;spare=null;return mu+sd*v;}
+  let u=0,v=0,s=0;do{u=rnd()*2-1;v=rnd()*2-1;s=u*u+v*v;}while(s>=1||s===0);
+  const f=Math.sqrt(-2*Math.log(s)/s);spare=v*f;return mu+sd*u*f;};}
+
+/* ---------- the Retailer class, mirroring the Python line for line ---------- */
+class Retailer{
+  constructor(s,S,leadTime){
+    this.s=s; this.S=S; this.leadTime=leadTime;
+    this.inventory=S; this.onOrder=[]; this.history=[]; this.unmet=0;
+  }
+  receive(day){
+    let got=0;
+    for(const o of this.onOrder) if(o.day===day) got+=o.qty;
+    this.inventory+=got;
+    this.onOrder=this.onOrder.filter(o=>o.day!==day);
+    return got;
+  }
+  serve(demand){
+    const shipped=Math.min(demand,this.inventory);
+    this.inventory-=shipped; this.unmet+=demand-shipped;
+    return {shipped, short:demand-shipped};
+  }
+  inventoryPosition(){
+    return this.inventory+this.onOrder.reduce((t,o)=>t+o.qty,0);
+  }
+  placeOrder(day){
+    const pos=this.inventoryPosition();
+    if(pos<this.s){
+      const qty=this.S-pos;
+      this.onOrder.push({day:day+this.leadTime, qty});
+      return {qty, arrives:day+this.leadTime, pos};
+    }
+    return {qty:0, pos};
+  }
+}
+
+const DAYS=60, MEAN=20;
+const state={s:80,S:200,L:3,sd:6,seed:20260914,day:0,run:null};
+
+function simulate(){
+  const rnd=mulberry32(state.seed), gauss=makeGauss(rnd);
+  const r=new Retailer(state.s,state.S,state.L);
+  const inv=[],pos=[],trace=[],bands=[];
+  let stockoutDays=0, orders=0;
+
+  for(let day=0;day<DAYS;day++){
+    const invBefore=r.inventory;
+    const got=r.receive(day);
+    const invAfterReceive=r.inventory;
+
+    const demand=Math.max(0,Math.round(gauss(MEAN,state.sd)));
+    const before=r.inventory;
+    const {shipped,short}=r.serve(demand);
+    const invAfterServe=r.inventory;
+
+    const o=r.placeOrder(day);
+    if(o.qty>0){orders++; bands.push([day,Math.min(day+state.L,DAYS-1)]);}
+
+    r.history.push(r.inventory);
+    if(r.inventory<=0) stockoutDays++;
+
+    inv.push(r.inventory);
+    pos.push(r.inventoryPosition());
+    trace.push({day,got,invBefore,invAfterReceive,demand,shipped,short,before,
+                invAfterServe,order:o,posEnd:r.inventoryPosition(),
+                onOrder:r.onOrder.map(x=>({...x}))});
+  }
+  const avg=inv.reduce((a,b)=>a+b,0)/inv.length;
+  return {inv,pos,trace,bands,unmet:r.unmet,stockoutDays,orders,avg};
+}
+
+/* ---------- chart ---------- */
+const W=900,H=340,PL=58,PR=126,PT=18,PB=42;
+function draw(){
+  const {inv,pos,bands}=state.run;
+  const raw=Math.max(state.S,...pos,...inv)*1.08+5;
+  const step=raw>400?100:raw>150?50:25;
+  const yMax=Math.ceil(raw/step)*step;
+  const x=i=>PL+(i/(DAYS-1))*(W-PL-PR);
+  const y=v=>H-PB-(v/yMax)*(H-PT-PB);
+  const path=a=>a.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+  let g="";
+
+  for(const [a,b] of bands)
+    g+=`<rect x="${x(a).toFixed(1)}" y="${PT}" width="${Math.max(1.5,x(b)-x(a)).toFixed(1)}"
+         height="${H-PT-PB}" fill="var(--band)"></rect>`;
+
+  for(let v=0;v<=yMax;v+=step){
+    const yy=y(v);
+    g+=`<line x1="${PL}" y1="${yy.toFixed(1)}" x2="${W-PR}" y2="${yy.toFixed(1)}"
+         stroke="var(--line-soft)" stroke-width="1"></line>`;
+    g+=`<text x="${PL-10}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="13"
+         fill="var(--ink-3)">${v}</text>`;
+  }
+  for(let d=0;d<DAYS;d+=10)
+    g+=`<text x="${x(d).toFixed(1)}" y="${H-PB+22}" text-anchor="middle" font-size="13"
+         fill="var(--ink-3)">${d}</text>`;
+  g+=`<text x="${((PL+W-PR)/2).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="13"
+       fill="var(--ink-3)">day</text>`;
+
+  g+=`<line x1="${PL}" y1="${y(state.s).toFixed(1)}" x2="${W-PR}" y2="${y(state.s).toFixed(1)}"
+       stroke="var(--ink-3)" stroke-width="2" stroke-dasharray="7 5"></line>`;
+  g+=`<text x="${W-PR+8}" y="${(y(state.s)+4).toFixed(1)}" font-size="13" fill="var(--ink-3)">s = ${state.s}</text>`;
+
+  g+=`<path d="${path(pos)}" fill="none" stroke="var(--pos)" stroke-width="2"
+       stroke-linejoin="round"></path>`;
+  g+=`<path d="${path(inv)}" fill="none" stroke="var(--inv)" stroke-width="2.5"
+       stroke-linejoin="round"></path>`;
+
+  let yP=y(pos[DAYS-1]), yI=y(inv[DAYS-1]);
+  if(Math.abs(yP-yI)<17){ const m=(yP+yI)/2; yP=m-9; yI=m+9; }
+  g+=`<text x="${W-PR+8}" y="${(yP+4).toFixed(1)}" font-size="13" font-weight="600"
+       fill="var(--pos)">position</text>`;
+  g+=`<text x="${W-PR+8}" y="${(yI+4).toFixed(1)}" font-size="13" font-weight="600"
+       fill="var(--inv)">on hand</text>`;
+
+  const d=state.day;
+  g+=`<line x1="${x(d).toFixed(1)}" y1="${PT}" x2="${x(d).toFixed(1)}" y2="${H-PB}"
+       stroke="var(--ink-3)" stroke-width="1.5" opacity=".55"></line>`;
+  g+=`<circle cx="${x(d).toFixed(1)}" cy="${y(inv[d]).toFixed(1)}" r="5" fill="var(--inv)"
+       stroke="var(--panel)" stroke-width="2"></circle>`;
+  g+=`<circle cx="${x(d).toFixed(1)}" cy="${y(pos[d]).toFixed(1)}" r="5" fill="var(--pos)"
+       stroke="var(--panel)" stroke-width="2"></circle>`;
+
+  document.getElementById("chart").innerHTML=g;
+}
+
+/* ---------- kpis, pipeline, verdict ---------- */
+function drawKpis(){
+  const r=state.run;
+  const k=[
+    {v:r.unmet, l:"units of demand unmet", cls:r.unmet===0?"good":"bad"},
+    {v:r.stockoutDays, l:"days at zero stock", cls:r.stockoutDays===0?"good":"bad"},
+    {v:Math.round(r.avg), l:"average units on hand", cls:""},
+    {v:r.orders, l:"orders placed in 60 days", cls:""}
+  ];
+  document.getElementById("kpis").innerHTML=k.map(o=>
+    `<div class="kpi ${o.cls}"><div class="v">${o.v}</div><div class="l">${o.l}</div></div>`).join("");
+}
+function drawPipe(){
+  const t=state.run.trace[state.day];
+  const el=document.getElementById("pipe");
+  if(!t.onOrder.length){ el.innerHTML=`<span class="empty">empty &mdash; nothing is on its way</span>`; return; }
+  el.innerHTML=t.onOrder.map(o=>{
+    const inDays=o.day-state.day;
+    return `<span class="block"><b>${o.qty}</b> units &middot; arrives day ${o.day}
+            ${inDays<=0?"(today)":`(in ${inDays} day${inDays===1?"":"s"})`}</span>`;
+  }).join("");
+}
+function drawVerdict(){
+  const r=state.run, cover=state.L*MEAN;
+  const el=document.getElementById("verdict");
+  if(r.unmet===0 && state.s>=cover)
+    el.innerHTML=`<b>Healthy.</b> Every customer was served. Your reorder point
+      <code>s = ${state.s}</code> covers the ${cover} units consumed while a delivery is in transit.`;
+  else if(r.unmet>0)
+    el.innerHTML=`<b>Stocking out.</b> ${r.unmet} units of demand went unserved.
+      Demand during the ${state.L}-day wait is about <b>${cover} units</b>, but you only reorder at
+      <code>s = ${state.s}</code>. Raise <code>s</code> above ${cover} and watch it clear.`;
+  else
+    el.innerHTML=`<b>No stockouts, but <code>s</code> is below lead-time demand (${cover} units).</b>
+      You were lucky with this particular demand sequence. Press <em>New random 60 days</em> a few times.`;
+}
+
+/* ---------- code trace ---------- */
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function drawCode(){
+  const t=state.run.trace[state.day];
+  const A=(txt,cls="")=>`   <span class="ann ${cls}"># ${esc(txt)}</span>`;
+  const b=v=>`<b>${v}</b>`;
+
+  const l1 = t.got>0
+      ? A(`${t.got} arrived  ->  inventory ${t.invBefore} becomes ${t.invAfterReceive}`,"fire")
+      : A("nothing due today");
+  const l2 = A(`demand = ${t.demand}`);
+  const l3 = t.short>0
+      ? A(`shipped ${t.shipped}, ${t.short} UNMET  ->  inventory ${t.before} becomes ${t.invAfterServe}`,"warn")
+      : A(`shipped ${t.shipped}  ->  inventory ${t.before} becomes ${t.invAfterServe}`);
+  const l4 = t.order.qty>0
+      ? A(`position ${t.order.pos} < s=${state.s}  ->  ORDER ${t.order.qty}, arrives day ${t.order.arrives}`,"fire")
+      : A(`position ${t.order.pos} >= s=${state.s}  ->  no order`);
+  const l5 = A(`recorded ${t.invAfterServe}`);
+
+  const K=s=>`<span class="kw">${s}</span>`, S=s=>`<span class="st">${s}</span>`;
+  const rows=[
+    [`<span class="cm">${K("for")} day ${K("in")} range(60):</span>`,""],
+    [`    r.receive(day)`,l1],
+    [`    demand = max(0, int(random.gauss(20, ${state.sd})))`,l2],
+    [`    r.serve(demand)`,l3],
+    [`    r.place_order(day)`,l4],
+    [`    r.history.append(r.inventory)`,l5]
+  ];
+  document.getElementById("code").innerHTML=rows.map(([c,a],i)=>
+    `<span class="cl${i===0?"":" active"}">${c}${a}</span>`).join("");
+  document.getElementById("dayno").textContent=state.day;
+}
+
+/* ---------- wiring ---------- */
+function rerun(){ state.run=simulate(); if(state.day>=DAYS) state.day=DAYS-1; render(); }
+function render(){ draw(); drawKpis(); drawPipe(); drawVerdict(); drawCode(); }
+
+const ids=[["s","sv"],["S","Sv"],["L","Lv"],["sd","sdv"]];
+for(const [id,out] of ids){
+  const el=document.getElementById(id);
+  el.addEventListener("input",()=>{
+    state[id]=+el.value;
+    document.getElementById(out).textContent=el.value;
+    rerun();
+  });
+}
+function applyPreset(name){
+  const p={healthy:{s:80,S:200,L:3,sd:6},
+           fail:{s:40,S:120,L:3,sd:6},
+           slow:{s:80,S:200,L:6,sd:6}}[name];
+  if(!p) return;
+  for(const [id,out] of ids){
+    state[id]=p[id];
+    document.getElementById(id).value=p[id];
+    document.getElementById(out).textContent=p[id];
+  }
+  state.day=0; rerun();
+}
+document.addEventListener("click",e=>{
+  const btn=e.target.closest("button"); if(!btn) return;
+  if(btn.dataset.preset) applyPreset(btn.dataset.preset);
+  if(btn.dataset.set){
+    const [k,v]=btn.dataset.set.split(":");
+    state[k]=+v;
+    document.getElementById(k).value=v;
+    document.getElementById(ids.find(a=>a[0]===k)[1]).textContent=v;
+    rerun();
+  }
+  if(btn.id==="reseed"||btn.id==="reseed2"){ state.seed=(Math.random()*1e9)|0; state.day=0; rerun(); }
+  if(btn.id==="next"){ state.day=Math.min(DAYS-1,state.day+1); render(); }
+  if(btn.id==="prev"){ state.day=Math.max(0,state.day-1); render(); }
+});
+document.addEventListener("keydown",e=>{
+  if(/input|textarea/i.test(e.target.tagName)) return;
+  if(e.key==="ArrowRight"){ state.day=Math.min(DAYS-1,state.day+1); render(); e.preventDefault(); }
+  if(e.key==="ArrowLeft"){ state.day=Math.max(0,state.day-1); render(); e.preventDefault(); }
+});
+
+rerun();
+</script>
+</body>
+</html>
